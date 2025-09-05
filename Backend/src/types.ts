@@ -1,11 +1,25 @@
-export interface User {
-  id: number;
-  username: string;
-  password: string;
+// Domain classes
+export class SubscriptionType {
+  id!: number;
+  name!: string;
+  hoursPerWeek!: number;
 }
 
-export interface Member {
-  id: number;
-  name: string;
-  subscriptionType: string;
+export class Course {
+  id!: number;
+  name!: string;
+}
+
+export class User {
+  id!: number;
+  name!: string;
+  email!: string;
+  password!: string;
+  subscriptionId!: number;
+}
+
+export class PersonalTrainer {
+  id!: number;
+  name!: string;
+  availableHours!: number;
 }

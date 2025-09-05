@@ -1,126 +1,108 @@
-import express, { Request, Response, NextFunction } from "express"; // Import Express and types
-import Database from "better-sqlite3"; // SQLite database driver
-import cors from "cors"; // Middleware to allow cross-origin requests
-import { User, Member } from "./types"; // Import TypeScript interfaces
+import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
+import { db } from "./db";
+import "./schemas"; // Create tables and seed data
+import { User } from "./types";
 
-// --- Initialize Express ---
 const app = express();
-
-// --- Middleware ---
-// Enable CORS so frontend can call backend
 app.use(cors());
-// Parse JSON request bodies automatically
 app.use(express.json());
 
-// --- Initialize SQLite Database ---
-// Opens (or creates if not exist) gym.db in the backend folder
-const db = new Database("gym.db");
+// ------------------------
+// Create Admin User (one-time)
+// ------------------------
+const ADMIN_EMAIL = "admin@example.com";
+const ADMIN_PASSWORD = "password123";
+const SUBSCRIPTION_ID = 3; // Unlimited
 
-// --- Create tables if they don't exist ---
-// Users table: stores username and password (plain text for prototype)
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
-  )
-`).run();
-
-// Members table: stores gym members and their subscription type
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS members (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    subscriptionType TEXT NOT NULL
-  )
-`).run();
-
-// Add a test user (only run once)
-const existing = db.prepare("SELECT * FROM users WHERE username = ?").get("admin");
-if (!existing) {
-  db.prepare("INSERT INTO users (username, password) VALUES (?, ?)").run("admin", "password123");
-  console.log("✅ Test user created: admin / password123");
+const existingAdmin = db.prepare("SELECT * FROM User WHERE email = ?").get(ADMIN_EMAIL);
+if (!existingAdmin) {
+  db.prepare("INSERT INTO User (name, email, password, subscriptionId) VALUES (?, ?, ?, ?)")
+    .run("Admin", ADMIN_EMAIL, ADMIN_PASSWORD, SUBSCRIPTION_ID);
+  console.log("✅ Admin user created:", ADMIN_EMAIL);
+} else {
+  console.log("Admin user already exists:", ADMIN_EMAIL);
 }
 
-
-// --- Authentication Middleware ---
-// Checks if a request has a valid "token" in Authorization header
+// ------------------------
+// Auth Middleware
+// ------------------------
 function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers["authorization"];
-  if (!authHeader) return res.sendStatus(401); // 401 = Unauthorized
+  if (!authHeader) return res.sendStatus(401);
 
-  // Fake token = username
   const token = authHeader.replace("Bearer ", "");
-  // Look up user by username
-  const user = db.prepare("SELECT * FROM users WHERE username = ?").get(token) as User | undefined;
+  const user = db.prepare("SELECT * FROM User WHERE email = ?").get(token) as User | undefined;
 
-  if (!user) return res.sendStatus(403); // 403 = Forbidden if user not found
+  if (!user) return res.sendStatus(403);
 
-  // Attach user to request for later use
   (req as any).user = user;
   next();
 }
 
-// --- Register Endpoint ---
-// POST /api/auth/register
-// Body: { username, password }
-app.post("/api/auth/register", (req: Request, res: Response) => {
-  const { username, password } = req.body;
-  if (!username || !password)
-    return res.status(400).json({ error: "Missing fields" }); // Bad request if missing data
+// ------------------------
+// Routes
+// ------------------------
+
+// Register a new user
+app.post("/api/auth/register", (req, res) => {
+  const { name, email, password, subscriptionId } = req.body;
+  if (!name || !email || !password || !subscriptionId)
+    return res.status(400).json({ error: "Missing fields" });
 
   try {
-    // Insert new user into database
-    const stmt = db.prepare("INSERT INTO users (username, password) VALUES (?, ?)");
-    const result = stmt.run(username, password);
-    res.status(201).json({ id: result.lastInsertRowid, username }); // Return created user ID
+    const result = db.prepare(
+      "INSERT INTO User (name, email, password, subscriptionId) VALUES (?, ?, ?, ?)"
+    ).run(name, email, password, subscriptionId);
+    res.status(201).json({ id: result.lastInsertRowid, name, email, subscriptionId });
   } catch {
-    res.status(400).json({ error: "Username already exists" }); // Catch duplicate usernames
+    res.status(400).json({ error: "Email already exists" });
   }
 });
 
-// --- Login Endpoint ---
-// POST /api/auth/login
-// Body: { username, password }
-// Returns a "token" (username in this prototype)
-app.post("/api/auth/login", (req: Request, res: Response) => {
-  const { username, password } = req.body;
+// Login
+app.post("/api/auth/login", (req, res) => {
+  const { email, password } = req.body;
 
-  // Look for user in DB matching username & password
-  const user = db.prepare(
-    "SELECT * FROM users WHERE username = ? AND password = ?"
-  ).get(username, password) as User | undefined;
+  // Tell TypeScript the query will return UserRow | undefined
+  const user = db
+    .prepare("SELECT * FROM User WHERE email = ? AND password = ?")
+    .get(email, password);
 
-  if (!user) return res.status(401).json({ error: "Invalid credentials" }); // Unauthorized if no match
+  if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-  // Fake token = just the username
-  res.json({ token: username });
+  // Return a token (just the email for prototype) 
+  res.json({ token: email});
 });
 
-// --- Members Endpoints ---
-// GET all members (protected route)
-app.get("/api/members", authMiddleware, (req: Request, res: Response) => {
-  // Retrieve all members from DB and cast to Member[]
-  const members = db.prepare("SELECT * FROM members").all() as Member[];
+// List all members
+app.get("/api/members", authMiddleware, (req, res) => {
+  const members = db.prepare(`
+    SELECT U.id, U.name, U.email, S.name AS subscription
+    FROM User U
+    JOIN SubscriptionType S ON U.subscriptionId = S.id
+  `).all();
   res.json(members);
 });
 
-// POST new member (protected route)
-app.post("/api/members", authMiddleware, (req: Request, res: Response) => {
-  const { name, subscriptionType } = req.body as Omit<Member, "id">; // Ignore ID for insertion
-  const stmt = db.prepare("INSERT INTO members (name, subscriptionType) VALUES (?, ?)");
-  const result = stmt.run(name, subscriptionType);
-  // Return the new member with assigned ID
-  res.status(201).json({ id: result.lastInsertRowid, name, subscriptionType });
+// List all subscription types
+app.get("/api/subscriptions", authMiddleware, (req, res) => {
+  const subs = db.prepare("SELECT * FROM SubscriptionType").all();
+  res.json(subs);
 });
 
-// DELETE a member by ID (protected route)
-app.delete("/api/members/:id", authMiddleware, (req: Request, res: Response) => {
-  db.prepare("DELETE FROM members WHERE id = ?").run(req.params.id);
-  res.sendStatus(204); // 204 = No Content, successful deletion
+// List all courses
+app.get("/api/courses", authMiddleware, (req, res) => {
+  const courses = db.prepare("SELECT * FROM Course").all();
+  res.json(courses);
 });
 
-// --- Start Server ---
+// List personal trainers
+app.get("/api/trainers", authMiddleware, (req, res) => {
+  const trainers = db.prepare("SELECT * FROM PersonalTrainer").all();
+  res.json(trainers);
+});
+
+// ------------------------
 const PORT = 5000;
 app.listen(PORT, () => console.log(`✅ API running on http://localhost:${PORT}`));
-// Server listens on port 5000
