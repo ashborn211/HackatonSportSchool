@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./logo.css";
-import logo from "./logo.png"; // ✅ importeer het logo als variabele
+import logo from "./logo.png"; 
 
 export default function Login() {
   const [email, setEmail] = useState("");
