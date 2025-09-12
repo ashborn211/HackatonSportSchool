@@ -32,7 +32,7 @@ export default function Login() {
       const data = await res.json();
       localStorage.setItem("token", data.token);
       
-      navigate("/home"); // <-- use navigate instead of redirect
+      navigate("/home");
     } catch (err) {
       console.error(err);
       setError("Er ging iets mis bij het inloggen");
