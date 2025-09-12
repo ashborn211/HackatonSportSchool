@@ -87,6 +87,59 @@ app.get("/api/trainers", authMiddleware, (req, res) => {
   res.json(trainers);
 });
 
+app.post("/api/subscription/add-course", authMiddleware, (req, res) => {
+  const body = req.body as { subscriptionId: number; courseId: number };
+
+  console.log(req.body);
+  console.log(body.courseId);
+  console.log(body.subscriptionId);
+
+  const subscription = db
+    .prepare("SELECT * FROM SubscriptionType WHERE id = ?")
+    .get(body.subscriptionId);
+
+  const course = db
+    .prepare("SELECT * FROM Course WHERE id = ?")
+    .get(body.courseId);
+
+  if (!subscription || !course) 
+  {
+    return res.status(400).json({ error: "Invalid subscription id or course id" });
+  };
+
+  const courseSubscriptionjoint = db
+    .prepare("SELECT * FROM SubscriptionCourseJoint WHERE subscriptionId = ? AND courseId = ?")
+    .get(body.subscriptionId, body.courseId);
+
+  if (courseSubscriptionjoint) 
+  {
+    return res.status(400).json({ error: "Course already added to subscription" });
+  }
+
+  db.prepare("INSERT INTO SubscriptionCourseJoint (subscriptionId, courseId) VALUES (?, ?)")
+    .run(body.subscriptionId, body.courseId);
+
+  return res.status(200).json();
+});
+
+app.delete("/api/subscription/remove-course", authMiddleware, (req, res) => {
+  const body = req.body as { subscriptionId: number; courseId: number };
+
+  const courseSubscriptionjoint = db
+    .prepare("SELECT * FROM SubscriptionCourseJoint WHERE subscriptionId = ? AND courseId = ?")
+    .get(body.subscriptionId, body.courseId);
+
+  if (!courseSubscriptionjoint)
+  {
+    return res.status(400).json({ error: "Course not found in subscription" });
+  }
+
+  db.prepare("DELETE FROM SubscriptionCourseJoint WHERE subscriptionId = ? AND courseId = ?")
+    .run(body.subscriptionId, body.courseId);
+
+  return res.status(200).json();
+});
+
 // ------------------------
 const PORT = 5000;
 app.listen(PORT, () => console.log(`\u2705 API running on http://localhost:${PORT}`));
