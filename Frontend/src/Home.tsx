@@ -1,5 +1,7 @@
 import React from "react";
 import logo from "./logo.png";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import "./Home.css";
 
 export default function Home() {
@@ -37,13 +39,22 @@ export default function Home() {
             </p>
             <ul className="checklist">
               <li>
-                <span className="checkmark">✅</span> Moderne apparatuur
+                <span className="checkmark">
+                  <FontAwesomeIcon icon={faCheck} />
+                </span>{" "}
+                Moderne apparatuur
               </li>
               <li>
-                <span className="checkmark">✅</span> Professionele Trainers
+                <span className="checkmark">
+                  <FontAwesomeIcon icon={faCheck} />
+                </span>{" "}
+                Professionele Trainers
               </li>
               <li>
-                <span className="checkmark">✅</span> Uitmuntende Cursussen
+                <span className="checkmark">
+                  <FontAwesomeIcon icon={faCheck} />
+                </span>{" "}
+                Uitmuntende Cursussen
               </li>
             </ul>
           </div>
