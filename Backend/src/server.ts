@@ -9,22 +9,6 @@ app.use(cors());
 app.use(express.json());
 
 // ------------------------
-// Create Admin User (one-time)
-// ------------------------
-const ADMIN_EMAIL = "admin@example.com";
-const ADMIN_PASSWORD = "password123";
-const SUBSCRIPTION_ID = 3; // Unlimited
-
-const existingAdmin = db.prepare("SELECT * FROM User WHERE email = ?").get(ADMIN_EMAIL);
-if (!existingAdmin) {
-  db.prepare("INSERT INTO User (name, email, password, subscriptionId) VALUES (?, ?, ?, ?)")
-    .run("Admin", ADMIN_EMAIL, ADMIN_PASSWORD, SUBSCRIPTION_ID);
-  console.log("✅ Admin user created:", ADMIN_EMAIL);
-} else {
-  console.log("Admin user already exists:", ADMIN_EMAIL);
-}
-
-// ------------------------
 // Auth Middleware
 // ------------------------
 function authMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -105,4 +89,4 @@ app.get("/api/trainers", authMiddleware, (req, res) => {
 
 // ------------------------
 const PORT = 5000;
-app.listen(PORT, () => console.log(`✅ API running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`\u2705 API running on http://localhost:${PORT}`));

@@ -1,25 +1,46 @@
 // Domain classes
-export class SubscriptionType {
-  id!: number;
-  name!: string;
-  hoursPerWeek!: number;
+export interface SubscriptionType {
+  id: number;
+  name: string;
+  timesPerWeek: number;
 }
 
-export class Course {
-  id!: number;
-  name!: string;
+export interface Subscription {
+  id: number;
+  subscriptionTypeId: number
+  userId: number;
 }
 
-export class User {
-  id!: number;
-  name!: string;
-  email!: string;
-  password!: string;
-  subscriptionId!: number;
+export interface Course {
+  id: number;
+  name: string;
 }
 
-export class PersonalTrainer {
-  id!: number;
-  name!: string;
-  availableHours!: number;
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface PersonalTrainer {
+  id: number;
+  name: string;
+}
+
+export interface SubscriptionCourseJoint {
+  subscriptionId: number;
+  courseId: number;
+}
+
+export interface Course {
+  id: number;
+  name: string;
+}
+
+export interface PersonalTrainerAppointment {
+  id: number;
+  userId: number;
+  trainerId: number;
+  appointmentDate: Date;
 }
