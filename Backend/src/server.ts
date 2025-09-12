@@ -59,15 +59,6 @@ app.post("/api/auth/login", (req, res) => {
   res.json({ token: email});
 });
 
-// List all members
-app.get("/api/members", authMiddleware, (req, res) => {
-  const members = db.prepare(`
-    SELECT U.id, U.name, U.email, S.name AS subscription
-    FROM User U
-    JOIN SubscriptionType S ON U.subscriptionId = S.id
-  `).all();
-  res.json(members);
-});
 
 // List all subscription types
 app.get("/api/subscriptions", authMiddleware, (req, res) => {
