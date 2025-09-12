@@ -1,14 +1,44 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; 
 import "./logo.css";
-import logo from "./logo.png"; 
+import logo from "./logo.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const navigate = useNavigate(); 
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Email:", email, "Password:", password);
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        setError("Ongeldige inloggegevens");
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      localStorage.setItem("token", data.token);
+      
+      navigate("/home");
+    } catch (err) {
+      console.error(err);
+      setError("Er ging iets mis bij het inloggen");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,8 +73,10 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" className="login-button">
-            Inloggen
+          {error && <p className="error-message">{error}</p>}
+
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? "Bezig..." : "Inloggen"}
           </button>
         </form>
       </div>
