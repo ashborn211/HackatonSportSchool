@@ -131,6 +131,19 @@ app.delete("/api/subscription/remove-course", authMiddleware, (req, res) => {
   return res.status(200).json();
 });
 
+app.get("/api/subscription/my-courses", authMiddleware, (req, res) => {
+  const body = req.body as { subscriptionId: number };
+
+  const courses = db.prepare(`
+    SELECT course.*
+    FROM Course course
+    JOIN SubscriptionCourseJoint scj ON course.id = scj.courseId
+    WHERE scj.subscriptionId = ?
+  `).all(body.subscriptionId);
+
+  return res.status(200).json(courses);
+});
+
 // ------------------------
 const PORT = 5000;
 app.listen(PORT, () => console.log(`\u2705 API running on http://localhost:${PORT}`));
